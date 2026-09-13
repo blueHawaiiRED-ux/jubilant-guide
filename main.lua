@@ -152,7 +152,7 @@ task.spawn(function()
                     if #validLeaves > 0 then
                         local teleportedCount = 0
                         for _, leaf in ipairs(validLeaves) do
-                            leaf.CFrame = rootPart.CFrame * CFrame.new(0, -3, 0)
+                            leaf.CFrame = rootPart.CFrame * CFrame.new(0, -2.6, 0)
                             teleportedCount = teleportedCount + 1
                             if teleportedCount >= 20 then
                                 break
