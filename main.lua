@@ -5,114 +5,210 @@ local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local isLoopActive = false
-local waitTime = 1.0 -- 初期状態の待機時間（1秒）
+local isEscapeActive = true -- 葉っぱ全滅時自分TPの初期状態（ON）
+local waitTime = 1.0
+local maxAmount = 20
+local currentTab = "Normal"
 
--- 指定のテレポート先座標 (Vector3)
 local escapePosition = Vector3.new(24.298, 51.743, -65.026)
+local rankedLeafPosition = Vector3.new(-81, 71.021, 296)
 
 -- ==========================================
--- 1. GUIの作成（コントロールパネル）
+-- 1. ゲーミング風スタイリッシュGUIの作成
 -- ==========================================
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "LeafCollectorPanel"
+screenGui.Name = "XenoLeafPremiumPanel"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = CoreGui
 
+-- メインフレーム（高級感のある超ダークグレー）
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 200, 0, 140)
+mainFrame.Size = UDim2.new(0, 220, 0, 270)
 mainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
 local frameCorner = Instance.new("UICorner")
-frameCorner.CornerRadius = UDim.new(0, 10)
+frameCorner.CornerRadius = UDim.new(0, 12)
 frameCorner.Parent = mainFrame
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Leaf TP Panel"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 16
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.Parent = mainFrame
+-- ネオン風の薄い枠線
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Color = Color3.fromRGB(45, 45, 50)
+frameStroke.Thickness = 1.5
+frameStroke.Parent = mainFrame
 
+-- タブコンテナ
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, 0, 0, 32)
+tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = mainFrame
+
+local normalTab = Instance.new("TextButton")
+normalTab.Size = UDim2.new(0.5, -3, 1, 0)
+normalTab.Position = UDim2.new(0, 2, 0, 0)
+normalTab.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+normalTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+normalTab.Text = "Normal"
+normalTab.Font = Enum.Font.GothamBold
+normalTab.TextSize = 13
+normalTab.Parent = tabContainer
+
+local rankedTab = Instance.new("TextButton")
+rankedTab.Size = UDim2.new(0.5, -3, 1, 0)
+rankedTab.Position = UDim2.new(0.5, 1, 0, 0)
+rankedTab.BackgroundColor3 = Color3.fromRGB(15, 15, 16)
+rankedTab.TextColor3 = Color3.fromRGB(120, 120, 125)
+rankedTab.Text = "Ranked"
+rankedTab.Font = Enum.Font.GothamBold
+rankedTab.TextSize = 13
+rankedTab.Parent = tabContainer
+
+local tCorner1 = Instance.new("UICorner") tCorner1.CornerRadius = UDim.new(0, 8) tCorner1.Parent = normalTab
+local tCorner2 = Instance.new("UICorner") tCorner2.CornerRadius = UDim.new(0, 8) tCorner2.Parent = rankedTab
+
+-- メインON/OFFボタン
 local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0.9, 0, 0, 40)
-toggleButton.Position = UDim2.new(0.05, 0, 0.25, 0)
-toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleButton.Size = UDim2.new(0.9, 0, 0, 38)
+toggleButton.Position = UDim2.new(0.05, 0, 0.16, 5)
+toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50) -- 初期は警告レッド
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.TextSize = 16
-toggleButton.Text = "Status: OFF"
-toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 14
+toggleButton.Text = "AUTO TP: DISABLED"
+toggleButton.Font = Enum.Font.GothamBold
 toggleButton.Parent = mainFrame
 
 local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 6)
+btnCorner.CornerRadius = UDim.new(0, 8)
 btnCorner.Parent = toggleButton
 
-local sliderTrack = Instance.new("Frame")
-sliderTrack.Size = UDim2.new(0.9, 0, 0, 10)
-sliderTrack.Position = UDim2.new(0.05, 0, 0.65, 0)
-sliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-sliderTrack.BorderSizePixel = 0
-sliderTrack.Parent = mainFrame
+-- 自分TP（Auto Escape）ON/OFFボタン
+local escapeButton = Instance.new("TextButton")
+escapeButton.Size = UDim2.new(0.9, 0, 0, 32)
+escapeButton.Position = UDim2.new(0.05, 0, 0.32, 5)
+escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80) -- 初期は安全グリーン
+escapeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+escapeButton.TextSize = 12
+escapeButton.Text = "LEAF GONE TP: ON"
+escapeButton.Font = Enum.Font.GothamBold
+escapeButton.Parent = mainFrame
 
-local trackCorner = Instance.new("UICorner")
-trackCorner.CornerRadius = UDim.new(0, 5)
-trackCorner.Parent = sliderTrack
+local escCorner = Instance.new("UICorner")
+escCorner.CornerRadius = UDim.new(0, 8)
+escCorner.Parent = escapeButton
+-- --- スライダー1: 待機時間 (0.01s - 5s) ---
+local timeTrack = Instance.new("Frame")
+timeTrack.Size = UDim2.new(0.9, 0, 0, 6)
+timeTrack.Position = UDim2.new(0.05, 0, 0.54, 10)
+timeTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+timeTrack.BorderSizePixel = 0
+timeTrack.Parent = mainFrame
 
-local sliderBtn = Instance.new("TextButton")
-sliderBtn.Size = UDim2.new(0, 16, 0, 16)
-sliderBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-sliderBtn.Position = UDim2.new(0.2, 0, 0.5, 0)
-sliderBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderBtn.Text = ""
-sliderBtn.Parent = sliderTrack
+local trackCorner1 = Instance.new("UICorner") trackCorner1.CornerRadius = UDim.new(0, 3) trackCorner1.Parent = timeTrack
 
-local btnCorner2 = Instance.new("UICorner")
-btnCorner2.CornerRadius = UDim.new(1, 0)
-btnCorner2.Parent = sliderBtn
+local timeBtn = Instance.new("TextButton")
+timeBtn.Size = UDim2.new(0, 14, 0, 14)
+timeBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+timeBtn.Position = UDim2.new(0.2, 0, 0.5, 0)
+timeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+timeBtn.Text = ""
+timeBtn.Parent = timeTrack
 
-local valueLabel = Instance.new("TextLabel")
-valueLabel.Size = UDim2.new(1, 0, 0, 25)
-valueLabel.Position = UDim2.new(0, 0, 0.78, 0)
-valueLabel.BackgroundTransparency = 1
-valueLabel.Text = "Wait Time: 1.00s"
-valueLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-valueLabel.TextSize = 14
-valueLabel.Font = Enum.Font.SourceSans
-valueLabel.Parent = mainFrame
+local btnCorner1 = Instance.new("UICorner") btnCorner1.CornerRadius = UDim.new(1, 0) btnCorner1.Parent = timeBtn
 
--- スライダーの動作
-local minWait = 0.01
-local maxWait = 5.0
-local isSliding = false
+local timeLabel = Instance.new("TextLabel")
+timeLabel.Size = UDim2.new(1, 0, 0, 18)
+timeLabel.Position = UDim2.new(0, 0, 0.59, 10)
+timeLabel.BackgroundTransparency = 1
+timeLabel.Text = "Wait Time: 1.00s"
+timeLabel.TextColor3 = Color3.fromRGB(180, 180, 185)
+timeLabel.TextSize = 12
+timeLabel.Font = Enum.Font.Gotham
+timeLabel.Parent = mainFrame
 
-local function updateSlider(input)
-    local trackWidth = sliderTrack.AbsoluteSize.X
-    local mouseX = input.Position.X - sliderTrack.AbsolutePosition.X
-    local percentage = math.clamp(mouseX / trackWidth, 0, 1)
-    sliderBtn.Position = UDim2.new(percentage, 0, 0.5, 0)
-    waitTime = minWait + (percentage * (maxWait - minWait))
-    valueLabel.Text = string.format("Wait Time: %.2fs", waitTime)
-end
+-- --- スライダー2: 回収個数 (1 - 100) ---
+local amtTrack = Instance.new("Frame")
+amtTrack.Size = UDim2.new(0.9, 0, 0, 6)
+amtTrack.Position = UDim2.new(0.05, 0, 0.76, 10)
+amtTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+amtTrack.BorderSizePixel = 0
+amtTrack.Parent = mainFrame
 
-sliderBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isSliding = true end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if isSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isSliding = false end
-end)
+local trackCorner2 = Instance.new("UICorner") trackCorner2.CornerRadius = UDim.new(0, 3) trackCorner2.Parent = amtTrack
+
+local amtBtn = Instance.new("TextButton")
+amtBtn.Size = UDim2.new(0, 14, 0, 14)
+amtBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+amtBtn.Position = UDim2.new(0.2, 0, 0.5, 0)
+amtBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+amtBtn.Text = ""
+amtBtn.Parent = amtTrack
+
+local btnCorner2 = Instance.new("UICorner") btnCorner2.CornerRadius = UDim.new(1, 0) btnCorner2.Parent = amtBtn
+
+local amtLabel = Instance.new("TextLabel")
+amtLabel.Size = UDim2.new(1, 0, 0, 18)
+amtLabel.Position = UDim2.new(0, 0, 0.81, 10)
+amtLabel.BackgroundTransparency = 1
+amtLabel.Text = "Max Amount: 20"
+amtLabel.TextColor3 = Color3.fromRGB(180, 180, 185)
+amtLabel.TextSize = 12
+amtLabel.Font = Enum.Font.Gotham
+amtLabel.Parent = mainFrame
 
 -- ==========================================
--- 2. 特殊判定付きのテレポートループ処理
+-- 2. スライダー動作ロジック
+-- ==========================================
+local activeSlider = nil
+
+local function updateSlider(input)
+    if not activeSlider then return end
+    local track = activeSlider == "time" and timeTrack or amtTrack
+    local btn = activeSlider == "time" and timeBtn or amtBtn
+    
+    local trackWidth = track.AbsoluteSize.X
+    local mouseX = input.Position.X - track.AbsolutePosition.X
+    local percentage = math.clamp(mouseX / trackWidth, 0, 1)
+    
+    btn.Position = UDim2.new(percentage, 0, 0.5, 0)
+    
+    if activeSlider == "time" then
+        waitTime = 0.01 + (percentage * (5.0 - 0.01))
+        timeLabel.Text = string.format("Wait Time: %.2fs", waitTime)
+    elseif activeSlider == "amt" then
+        maxAmount = math.round(1 + (percentage * (100 - 1)))
+        amtLabel.Text = "Max Amount: " .. tostring(maxAmount)
+    end
+end
+
+timeBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then activeSlider = "time" end end)
+amtBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then activeSlider = "amt" end end)
+UserInputService.InputChanged:Connect(function(input) if activeSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end end)
+UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then activeSlider = nil end end)
+
+-- タブ切り替え
+local function switchTab(tabName)
+    currentTab = tabName
+    if tabName == "Normal" then
+        normalTab.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+        normalTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        rankedTab.BackgroundColor3 = Color3.fromRGB(15, 15, 16)
+        rankedTab.TextColor3 = Color3.fromRGB(120, 120, 125)
+    else
+        rankedTab.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+        rankedTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        normalTab.BackgroundColor3 = Color3.fromRGB(15, 15, 16)
+        normalTab.TextColor3 = Color3.fromRGB(120, 120, 125)
+    end
+end
+normalTab.MouseButton1Click:Connect(function() switchTab("Normal") end)
+rankedTab.MouseButton1Click:Connect(function() switchTab("Ranked") end)
+
+-- ==========================================
+-- 3. 特殊判定付きのテレポートループ処理
 -- ==========================================
 task.spawn(function()
     while true do
@@ -127,40 +223,45 @@ task.spawn(function()
                 if leavesFolder then
                     local leaves = leavesFolder:GetChildren()
                     local validLeaves = {}
+                    local currentPos = rootPart.Position
+                    local centerPosition = (currentTab == "Normal") and currentPos or rankedLeafPosition
                     
-                    -- 1. まずは「5スタッドより遠い距離にあるLeaf」を探してリストに入れる
                     for _, child in ipairs(leaves) do
                         if child.Name == "Leaf" and child:IsA("BasePart") then
-                            if (child.Position - rootPart.Position).Magnitude > 5 then
+                            if (child.Position - centerPosition).Magnitude > 5 then
                                 table.insert(validLeaves, child)
                             end
                         end
                     end
                     
-                    -- 2. もし5スタッド以上のLeafが1個もなかったら、「0スタッド以上（全部）」を対象にする
                     if #validLeaves == 0 then
                         for _, child in ipairs(leaves) do
                             if child.Name == "Leaf" and child:IsA("BasePart") then
-                                if (child.Position - rootPart.Position).Magnitude >= 0 then
+                                if (child.Position - centerPosition).Magnitude >= 0 then
                                     table.insert(validLeaves, child)
                                 end
                             end
                         end
                     end
                     
-                    -- 3. リストに対象のLeafが存在すれば、最大20個テレポートさせる
                     if #validLeaves > 0 then
                         local teleportedCount = 0
                         for _, leaf in ipairs(validLeaves) do
-                            leaf.CFrame = rootPart.CFrame * CFrame.new(0, -2.6, 0)
+                            if currentTab == "Normal" then
+                                leaf.CFrame = CFrame.new(currentPos.X, currentPos.Y, currentPos.Z)
+                            else
+                                leaf.CFrame = CFrame.new(rankedLeafPosition)
+                            end
+                            
                             teleportedCount = teleportedCount + 1
-                            if teleportedCount >= 20 then
+                            if teleportedCount >= maxAmount then
                                 break
                             end
                         end
                     else
-                        -- 4. フォルダー内に対象のLeafが完全に1個も存在しなくなった場合、指定座標に自分をtp
-                        rootPart.CFrame = CFrame.new(escapePosition)
+                        if currentTab == "Normal" and isEscapeActive then
+                            rootPart.CFrame = CFrame.new(escapePosition)
+                        end
                     end
                 end
             end
@@ -168,14 +269,26 @@ task.spawn(function()
     end
 end)
 
--- ボタンのON/OFF切り替え
+-- メインON/OFF切り替え
 toggleButton.MouseButton1Click:Connect(function()
     isLoopActive = not isLoopActive
     if isLoopActive then
-        toggleButton.Text = "Status: ON"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+        toggleButton.Text = "AUTO TP: ENABLED"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
     else
-        toggleButton.Text = "Status: OFF"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        toggleButton.Text = "AUTO TP: DISABLED"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    end
+end)
+
+-- 自分TPのON/OFF切り替え
+escapeButton.MouseButton1Click:Connect(function()
+    isEscapeActive = not isEscapeActive
+    if isEscapeActive then
+        escapeButton.Text = "LEAF GONE TP: ON"
+        escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
+    else
+        escapeButton.Text = "LEAF GONE TP: OFF"
+        escapeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     end
 end)
