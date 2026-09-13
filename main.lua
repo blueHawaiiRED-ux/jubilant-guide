@@ -68,7 +68,7 @@ task.spawn(function()
                             -- まだ離れているLeafを1個だけ探す
                             if (child.Position - rootPart.Position).Magnitude > 5 then
                                 -- プレイヤーの足元（HumanoidRootPartの真下、Y軸を約3スタッド下げる）にテレポート
-                                child.CFrame = rootPart.CFrame * CFrame.new(0, -3, 0)
+                                child.CFrame = rootPart.CFrame * CFrame.new(0, -2.5, 0)
                                 break
                             end
                         end
