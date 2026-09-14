@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local isLoopActive = false
@@ -11,6 +12,14 @@ local maxAmount = 20
 
 local escapePosition = Vector3.new(24.298, 51.743, -65.026)
 
+-- Tweenのアニメーション設定
+local TWEEN_DURATION = 0.5 
+local tweenInfo = TweenInfo.new(
+    TWEEN_DURATION,
+    Enum.EasingStyle.Linear,
+    Enum.EasingDirection.Out
+)
+
 -- ==========================================
 -- 1. スタイリッシュGUIの作成（Ranked削除・コンパクト化）
 -- ==========================================
@@ -19,7 +28,7 @@ screenGui.Name = "XenoLeafPremiumPanel"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = CoreGui
 
--- メインフレーム（縦幅を 210 にコンパクト化）
+-- メインフレーム
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 220, 0, 210)
 mainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
@@ -33,7 +42,6 @@ local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 12)
 frameCorner.Parent = mainFrame
 
--- ネオン風の薄い枠線
 local frameStroke = Instance.new("UIStroke")
 frameStroke.Color = Color3.fromRGB(45, 45, 50)
 frameStroke.Thickness = 1.5
@@ -53,7 +61,7 @@ titleLabel.Parent = mainFrame
 local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0.9, 0, 0, 38)
 toggleButton.Position = UDim2.new(0.05, 0, 0.16, 5)
-toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50) -- 初期はレッド
+toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.TextSize = 14
 toggleButton.Text = "AUTO TP: DISABLED"
@@ -64,11 +72,22 @@ local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 8)
 btnCorner.Parent = toggleButton
 
+toggleButton.MouseButton1Click:Connect(function()
+    isLoopActive = not isLoopActive
+    if isLoopActive then
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
+        toggleButton.Text = "AUTO TP: ENABLED"
+    else
+        toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+        toggleButton.Text = "AUTO TP: DISABLED"
+    end
+end)
+
 -- 自分TP（Auto Escape）ON/OFFボタン
 local escapeButton = Instance.new("TextButton")
 escapeButton.Size = UDim2.new(0.9, 0, 0, 32)
 escapeButton.Position = UDim2.new(0.05, 0, 0.36, 5)
-escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80) -- 初期はグリーン
+escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
 escapeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 escapeButton.TextSize = 12
 escapeButton.Text = "LEAF GONE TP: ON"
@@ -78,7 +97,19 @@ escapeButton.Parent = mainFrame
 local escCorner = Instance.new("UICorner")
 escCorner.CornerRadius = UDim.new(0, 8)
 escCorner.Parent = escapeButton
--- --- スライダー1: 待機時間 (0.01s - 5s) ---
+
+escapeButton.MouseButton1Click:Connect(function()
+    isEscapeActive = not isEscapeActive
+    if isEscapeActive then
+        escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
+        escapeButton.Text = "LEAF GONE TP: ON"
+    else
+        escapeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+        escapeButton.Text = "LEAF GONE TP: OFF"
+    end
+end)
+
+-- --- スライダー1: 待機時間 ---
 local timeTrack = Instance.new("Frame")
 timeTrack.Size = UDim2.new(0.9, 0, 0, 6)
 timeTrack.Position = UDim2.new(0.05, 0, 0.54, 10)
@@ -108,7 +139,7 @@ timeLabel.TextSize = 12
 timeLabel.Font = Enum.Font.Gotham
 timeLabel.Parent = mainFrame
 
--- --- スライダー2: 回収個数 (1 - 100) ---
+-- --- スライダー2: 回収個数 ---
 local amtTrack = Instance.new("Frame")
 amtTrack.Size = UDim2.new(0.9, 0, 0, 6)
 amtTrack.Position = UDim2.new(0.05, 0, 0.76, 10)
@@ -167,9 +198,8 @@ timeBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserIn
 amtBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then activeSlider = "amt" end end)
 UserInputService.InputChanged:Connect(function(input) if activeSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end end)
 UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then activeSlider = nil end end)
-
 -- ==========================================
--- 3. 特殊判定付きのテレポートループ処理
+-- 3. 特殊判定付きのTweenループ処理（修正版）
 -- ==========================================
 task.spawn(function()
     while true do
@@ -186,95 +216,62 @@ task.spawn(function()
                     local validLeaves = {}
                     local currentPos = rootPart.Position
                     
-                    -- 1. まだタグ（Laf）のついていない、5スタッドより遠い新規のLeafを探す
+                    -- すでにTween移動中のパーツや、処理済みのパーツを除外して集める
                     for _, child in ipairs(leaves) do
-                        if child.Name == "Leaf" and child:IsA("BasePart") and not child:GetAttribute("Laf") then
-                            if (child.Position - currentPos).Magnitude > 5 then
+                        if child.Name == "Leaf" and child:IsA("BasePart") and not child:GetAttribute("Laf") and not child:GetAttribute("IsTweening") then
+                            -- Y軸を除外した水平距離の計算
+                            local horizTarget = Vector3.new(currentPos.X, child.Position.Y, currentPos.Z)
+                            if (child.Position - horizTarget).Magnitude > 5 then
                                 table.insert(validLeaves, child)
                             end
                         end
                     end
                     
-                    -- 2. 新規がなければ、まだタグ（Laf）のついていないすべての距離のLeafを対象にする
                     if #validLeaves == 0 then
                         for _, child in ipairs(leaves) do
-                            if child.Name == "Leaf" and child:IsA("BasePart") and not child:GetAttribute("Laf") then
-                                if (child.Position - currentPos).Magnitude >= 0 then
-                                    table.insert(validLeaves, child)
-                                end
+                            if child.Name == "Leaf" and child:IsA("BasePart") and not child:GetAttribute("Laf") and not child:GetAttribute("IsTweening") then
+                                table.insert(validLeaves, child)
                             end
                         end
                     end
                     
-                    -- 3. 新規のLeafが存在すれば、最大 maxAmount 個にタグを付けて最初のテレポートを実行
-                    if #validLeaves > 0 then
-                        local teleportedCount = 0
-                        for _, leaf in ipairs(validLeaves) do
-                            -- 呼び出した時の最初の場所を記憶させてタグ（Laf）を付与
-                            leaf:SetAttribute("Laf", true)
-                            leaf:SetAttribute("BasePos", currentPos)
-                            leaf:SetAttribute("ToggleState", false) -- 交互移動用のフラグ
-                            
-                            leaf.CFrame = CFrame.new(currentPos.X, currentPos.Y, currentPos.Z)
-                            
-                            teleportedCount = teleportedCount + 1
-                            if teleportedCount >= maxAmount then
-                                break
-                            end
-                        end
-                    else
-                        -- 4. 新規が完全にない場合、すでに「Laf」タグがついている既回収のLeafを交互tpさせる
-                        local taggedLeavesExist = false
-                        for _, child in ipairs(leaves) do
-                            if child.Name == "Leaf" and child:IsA("BasePart") and child:GetAttribute("Laf") then
-                                taggedLeavesExist = true
-                                local basePos = child:GetAttribute("BasePos")
-                                local toggleState = child:GetAttribute("ToggleState")
-                                
-                                if not toggleState then
-                                    -- フラグがfalseなら、X軸から+10ズレた場所にテレポート
-                                    child.CFrame = CFrame.new(basePos.X + 10, basePos.Y, basePos.Z)
-                                    child:SetAttribute("ToggleState", true)
-                                else
-                                    -- フラグがtrueなら、元の呼び出した場所にテレポート
-                                    child.CFrame = CFrame.new(basePos.X, basePos.Y, basePos.Z)
-                                    child:SetAttribute("ToggleState", false)
-                                end
-                            end
+                    -- 葉っぱが1つもない（または全滅した）場合の自分TP処理
+                    if #validLeaves == 0 and isEscapeActive then
+                        rootPart.CFrame = CFrame.new(escapePosition)
+                    end
+                    
+                    -- 指定された最大個数（maxAmount）の分だけTweenで引き寄せる
+                    local count = 0
+                    for _, leaf in ipairs(validLeaves) do
+                        if count >= maxAmount then 
+                            break 
                         end
                         
-                        -- 5. マップにLeafが完全に1個も存在しない場合、指定座標に自分をtp（トグルON時のみ）
-                        if not taggedLeavesExist and isEscapeActive then
-                            rootPart.CFrame = CFrame.new(escapePosition)
-                        end
+                        -- 目標地点の作成（X, Zはプレイヤー、YはLeafの元の高さを固定）
+                        local targetPosition = Vector3.new(rootPart.Position.X, leaf.Position.Y, rootPart.Position.Z)
+                        
+                        leaf.Anchored = true
+                        leaf.CanCollide = false
+                        leaf:SetAttribute("IsTweening", true) -- 二重処理防止フラグ
+                        
+                        local tween = TweenService:Create(leaf, tweenInfo, {Position = targetPosition})
+                        tween:Play()
+                        
+                        -- Tween完了時に元のタグ処理を実行
+                        tween.Completed:Connect(function()
+                            leaf:SetAttribute("IsTweening", nil)
+                            leaf:SetAttribute("Laf", true)
+                        end)
+                        
+                        count = count + 1
+                    end
+                else
+                    -- Leavesフォルダ自体がない場合もエスケープTP
+                    if isEscapeActive then
+                        rootPart.CFrame = CFrame.new(escapePosition)
                     end
                 end
             end
         end
     end
 end)
-
--- メインON/OFF切り替え
-toggleButton.MouseButton1Click:Connect(function()
-    isLoopActive = not isLoopActive
-    if isLoopActive then
-        toggleButton.Text = "AUTO TP: ENABLED"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
-    else
-        toggleButton.Text = "AUTO TP: DISABLED"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    end
-end)
-
--- 自分TPのON/OFF切り替え
-escapeButton.MouseButton1Click:Connect(function()
-    isEscapeActive = not isEscapeActive
-    if isEscapeActive then
-        escapeButton.Text = "LEAF GONE TP: ON"
-        escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
-    else
-        escapeButton.Text = "LEAF GONE TP: OFF"
-        escapeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    end
-end)
-
