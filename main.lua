@@ -8,22 +8,20 @@ local isLoopActive = false
 local isEscapeActive = true -- 葉っぱ全滅時自分TPの初期状態（ON）
 local waitTime = 1.0
 local maxAmount = 20
-local currentTab = "Normal"
 
 local escapePosition = Vector3.new(24.298, 51.743, -65.026)
-local rankedLeafPosition = Vector3.new(-81, 71.021, 296)
 
 -- ==========================================
--- 1. ゲーミング風スタイリッシュGUIの作成
+-- 1. スタイリッシュGUIの作成（Ranked削除・コンパクト化）
 -- ==========================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "XenoLeafPremiumPanel"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = CoreGui
 
--- メインフレーム（高級感のある超ダークグレー）
+-- メインフレーム（縦幅を 210 にコンパクト化）
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 270)
+mainFrame.Size = UDim2.new(0, 220, 0, 210)
 mainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
 mainFrame.BorderSizePixel = 0
@@ -41,40 +39,21 @@ frameStroke.Color = Color3.fromRGB(45, 45, 50)
 frameStroke.Thickness = 1.5
 frameStroke.Parent = mainFrame
 
--- タブコンテナ
-local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(1, 0, 0, 32)
-tabContainer.BackgroundTransparency = 1
-tabContainer.Parent = mainFrame
-
-local normalTab = Instance.new("TextButton")
-normalTab.Size = UDim2.new(0.5, -3, 1, 0)
-normalTab.Position = UDim2.new(0, 2, 0, 0)
-normalTab.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
-normalTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-normalTab.Text = "Normal"
-normalTab.Font = Enum.Font.GothamBold
-normalTab.TextSize = 13
-normalTab.Parent = tabContainer
-
-local rankedTab = Instance.new("TextButton")
-rankedTab.Size = UDim2.new(0.5, -3, 1, 0)
-rankedTab.Position = UDim2.new(0.5, 1, 0, 0)
-rankedTab.BackgroundColor3 = Color3.fromRGB(15, 15, 16)
-rankedTab.TextColor3 = Color3.fromRGB(120, 120, 125)
-rankedTab.Text = "Ranked"
-rankedTab.Font = Enum.Font.GothamBold
-rankedTab.TextSize = 13
-rankedTab.Parent = tabContainer
-
-local tCorner1 = Instance.new("UICorner") tCorner1.CornerRadius = UDim.new(0, 8) tCorner1.Parent = normalTab
-local tCorner2 = Instance.new("UICorner") tCorner2.CornerRadius = UDim.new(0, 8) tCorner2.Parent = rankedTab
+-- タイトルラベル
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Leaf TP Panel"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
 
 -- メインON/OFFボタン
 local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0.9, 0, 0, 38)
 toggleButton.Position = UDim2.new(0.05, 0, 0.16, 5)
-toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50) -- 初期は警告レッド
+toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50) -- 初期はレッド
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.TextSize = 14
 toggleButton.Text = "AUTO TP: DISABLED"
@@ -88,8 +67,8 @@ btnCorner.Parent = toggleButton
 -- 自分TP（Auto Escape）ON/OFFボタン
 local escapeButton = Instance.new("TextButton")
 escapeButton.Size = UDim2.new(0.9, 0, 0, 32)
-escapeButton.Position = UDim2.new(0.05, 0, 0.32, 5)
-escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80) -- 初期は安全グリーン
+escapeButton.Position = UDim2.new(0.05, 0, 0.36, 5)
+escapeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 80) -- 初期はグリーン
 escapeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 escapeButton.TextSize = 12
 escapeButton.Text = "LEAF GONE TP: ON"
@@ -189,24 +168,6 @@ amtBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInp
 UserInputService.InputChanged:Connect(function(input) if activeSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end end)
 UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then activeSlider = nil end end)
 
--- タブ切り替え
-local function switchTab(tabName)
-    currentTab = tabName
-    if tabName == "Normal" then
-        normalTab.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
-        normalTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-        rankedTab.BackgroundColor3 = Color3.fromRGB(15, 15, 16)
-        rankedTab.TextColor3 = Color3.fromRGB(120, 120, 125)
-    else
-        rankedTab.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
-        rankedTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-        normalTab.BackgroundColor3 = Color3.fromRGB(15, 15, 16)
-        normalTab.TextColor3 = Color3.fromRGB(120, 120, 125)
-    end
-end
-normalTab.MouseButton1Click:Connect(function() switchTab("Normal") end)
-rankedTab.MouseButton1Click:Connect(function() switchTab("Ranked") end)
-
 -- ==========================================
 -- 3. 特殊判定付きのテレポートループ処理
 -- ==========================================
@@ -224,34 +185,37 @@ task.spawn(function()
                     local leaves = leavesFolder:GetChildren()
                     local validLeaves = {}
                     local currentPos = rootPart.Position
-                    local centerPosition = (currentTab == "Normal") and currentPos or rankedLeafPosition
                     
+                    -- 1. まだタグ（Laf）のついていない、5スタッドより遠い新規のLeafを探す
                     for _, child in ipairs(leaves) do
-                        if child.Name == "Leaf" and child:IsA("BasePart") then
-                            if (child.Position - centerPosition).Magnitude > 5 then
+                        if child.Name == "Leaf" and child:IsA("BasePart") and not child:GetAttribute("Laf") then
+                            if (child.Position - currentPos).Magnitude > 5 then
                                 table.insert(validLeaves, child)
                             end
                         end
                     end
                     
+                    -- 2. 新規がなければ、まだタグ（Laf）のついていないすべての距離のLeafを対象にする
                     if #validLeaves == 0 then
                         for _, child in ipairs(leaves) do
-                            if child.Name == "Leaf" and child:IsA("BasePart") then
-                                if (child.Position - centerPosition).Magnitude >= 0 then
+                            if child.Name == "Leaf" and child:IsA("BasePart") and not child:GetAttribute("Laf") then
+                                if (child.Position - currentPos).Magnitude >= 0 then
                                     table.insert(validLeaves, child)
                                 end
                             end
                         end
                     end
                     
+                    -- 3. 新規のLeafが存在すれば、最大 maxAmount 個にタグを付けて最初のテレポートを実行
                     if #validLeaves > 0 then
                         local teleportedCount = 0
                         for _, leaf in ipairs(validLeaves) do
-                            if currentTab == "Normal" then
-                                leaf.CFrame = CFrame.new(currentPos.X, currentPos.Y, currentPos.Z)
-                            else
-                                leaf.CFrame = CFrame.new(rankedLeafPosition)
-                            end
+                            -- 呼び出した時の最初の場所を記憶させてタグ（Laf）を付与
+                            leaf:SetAttribute("Laf", true)
+                            leaf:SetAttribute("BasePos", currentPos)
+                            leaf:SetAttribute("ToggleState", false) -- 交互移動用のフラグ
+                            
+                            leaf.CFrame = CFrame.new(currentPos.X, currentPos.Y, currentPos.Z)
                             
                             teleportedCount = teleportedCount + 1
                             if teleportedCount >= maxAmount then
@@ -259,7 +223,28 @@ task.spawn(function()
                             end
                         end
                     else
-                        if currentTab == "Normal" and isEscapeActive then
+                        -- 4. 新規が完全にない場合、すでに「Laf」タグがついている既回収のLeafを交互tpさせる
+                        local taggedLeavesExist = false
+                        for _, child in ipairs(leaves) do
+                            if child.Name == "Leaf" and child:IsA("BasePart") and child:GetAttribute("Laf") then
+                                taggedLeavesExist = true
+                                local basePos = child:GetAttribute("BasePos")
+                                local toggleState = child:GetAttribute("ToggleState")
+                                
+                                if not toggleState then
+                                    -- フラグがfalseなら、X軸から+10ズレた場所にテレポート
+                                    child.CFrame = CFrame.new(basePos.X + 10, basePos.Y, basePos.Z)
+                                    child:SetAttribute("ToggleState", true)
+                                else
+                                    -- フラグがtrueなら、元の呼び出した場所にテレポート
+                                    child.CFrame = CFrame.new(basePos.X, basePos.Y, basePos.Z)
+                                    child:SetAttribute("ToggleState", false)
+                                end
+                            end
+                        end
+                        
+                        -- 5. マップにLeafが完全に1個も存在しない場合、指定座標に自分をtp（トグルON時のみ）
+                        if not taggedLeavesExist and isEscapeActive then
                             rootPart.CFrame = CFrame.new(escapePosition)
                         end
                     end
@@ -292,3 +277,4 @@ escapeButton.MouseButton1Click:Connect(function()
         escapeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     end
 end)
+
